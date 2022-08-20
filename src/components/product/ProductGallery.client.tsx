@@ -1,5 +1,4 @@
 import {useProductOptions, Image} from '@shopify/hydrogen';
-import Aos from 'aos';
 import {useEffect, useState} from 'react';
 
 function splitOnForwardSlash(text: string | undefined) {
@@ -23,15 +22,81 @@ export function ProductGallery({media}: {media: MediaEdge['node'][]}) {
     );
   }
 
+  const [scrollY, setScrollY] = useState(0);
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+
+      if (window.scrollY > 0 && !hasLoaded) {
+        setHasLoaded(true);
+        handleStyle();
+      }
+    };
+
+    // just trigger this so that the initial state
+    // is updated as soon as the component is mounted
+    // related: https://stackoverflow.com/a/63408216
+    handleScroll();
+
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  const handleStyle = () => {
+    if (window.scrollY > 0) {
+      window.document.addEventListener('scroll', function (event) {
+        const animatedBoxes =
+          window.document.getElementsByClassName('is-animated');
+
+        Array.prototype.forEach.call(animatedBoxes, (animatedBox) => {
+          if (isElementInViewport(animatedBox)) {
+            addClass(animatedBox, 'fadeInUp');
+          }
+        });
+      });
+    }
+
+    const isElementInViewport = (el) => {
+      let top = el.offsetTop;
+      let left = el.offsetLeft;
+      const width = el.offsetWidth;
+      const height = el.offsetHeight;
+
+      while (el.offsetParent) {
+        el = el.offsetParent;
+        top += el.offsetTop;
+        left += el.offsetLeft;
+      }
+
+      return (
+        top < window.pageYOffset + window.innerHeight &&
+        left < window.pageXOffset + window.innerWidth &&
+        top + height > window.pageYOffset &&
+        left + width > window.pageXOffset
+      );
+    };
+
+    const addClass = (element, className) => {
+      const arrayClasses = element.className.split(' ');
+      if (arrayClasses.indexOf(className) === -1) {
+        element.className += ' ' + className;
+      }
+    };
+  };
+
   return (
     <>
       {selectedImages?.map((selectedImage, index) => {
         return (
-          <div className="mb-12 animate-up" id={index} key={selectedImage?.id}>
+          <div className="mb-12" id={index} key={selectedImage?.id}>
             <Image
+              className={`is-animated ${index === 0 ? 'fadeInUp' : ''}`}
               width="100%"
               height="100%"
-              className="is-animated fadeInUp"
               alt={selectedImage?.image?.altText ?? 'Recommended Product'}
               src={selectedImage?.image?.url as string}
             />
